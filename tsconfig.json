@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "resolveJsonModule": true,
+    "allowSyntheticDefaultImports": true,
+    "declarationMap": true,
+    "esModuleInterop": true,
+    "declaration": true,
+    "noImplicitAny": true,
+    "module": "NodeNext",
+    "target": "ESNext",
+    "moduleResolution": "Node16",
+    "outDir": "src"
+  },
+  "include": ["src-ts/**/*"]
+}

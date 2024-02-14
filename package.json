@@ -1,21 +1,25 @@
 {
-    "name": "ws_task",
-    "version": "1.0.0",
-    "description": "Template for the WebSocket remote control task",
-    "main": "index.js",
-    "type": "module",
-    "scripts": {
-        "start": "node ./index.js",
-        "start:dev": "nodemon ./index.js",
-        "test": "echo \"Error: no test specified\" && exit 1"
-    },
-    "author": "Andrei Auchynnikau",
-    "keywords": [],
-    "license": "ISC",
-    "devDependencies": {
-        "nodemon": "^2.0.16"
-    },
-    "dependencies": {
-        "ws": "^8.8.0"
-    }
+  "name": "ws_task",
+  "version": "1.0.0",
+  "description": "Battleship websocket",
+  "main": "index.js",
+  "scripts": {
+    "start": "node ./index.js",
+    "start:dev": "nodemon src-ts/index.ts",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Pavel Mihailov",
+  "keywords": [],
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^20.11.17",
+    "@types/ws": "^8.5.10",
+    "nodemon": "^2.0.16",
+    "ts-node": "^10.9.2",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "ws": "^8.8.0"
+  }
 }
