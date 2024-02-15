@@ -5,5 +5,5 @@ export interface IPlayer {
 
 export interface ICommand {
   type: string;
-  data: object;
+  data: string;
 }

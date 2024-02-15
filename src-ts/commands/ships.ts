@@ -1,7 +1,10 @@
-export const start_game = () => {
-  console.log("start game");
+import { ICommand } from '../types';
+import { WebSocket } from 'ws';
+
+export const START_GAME = (data: ICommand, ws: WebSocket) => {
+  console.log('start game');
 };
 
-export const add_ships = () => {
-  console.log("add ships");
+export const ADD_SHIPS = (data: ICommand, ws: WebSocket) => {
+  console.log('add ships');
 };

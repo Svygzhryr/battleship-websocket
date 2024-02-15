@@ -1,15 +1,18 @@
-export const attack = () => {
-  console.log("attack");
+import { ICommand } from '../types';
+import { WebSocket } from 'ws';
+
+export const ATTACK = (data: ICommand, ws: WebSocket) => {
+  console.log('attack');
 };
 
-export const randomAttack = () => {
-  console.log("randomAttack");
+export const RANDOM_ATTACK = (data: ICommand, ws: WebSocket) => {
+  console.log('randomAttack');
 };
 
-export const turn = () => {
-  console.log("turn");
+export const TURN = (data: ICommand, ws: WebSocket) => {
+  console.log('turn');
 };
 
-export const finish = () => {
-  console.log("finish");
+export const FINISH = (data: ICommand, ws: WebSocket) => {
+  console.log('finish');
 };

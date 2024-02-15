@@ -1,11 +1,14 @@
-export const create_game = () => {
-  console.log("createRoom");
+import { ICommand } from '../types';
+import { WebSocket } from 'ws';
+
+export const CREATE_GAME = (data: ICommand, ws: WebSocket) => {
+  console.log('createRoom');
 };
 
-export const add_user_to_room = () => {
-  console.log("add user");
+export const ADD_USER_TO_ROOM = (data: ICommand, ws: WebSocket) => {
+  console.log('add user');
 };
 
-export const update_room = () => {
-  console.log("update room");
+export const UPDATE_ROOM = (data: ICommand, ws: WebSocket) => {
+  console.log('update room');
 };
