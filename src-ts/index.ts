@@ -1,4 +1,4 @@
-import startWebsocketServer from './websocket/websocket-server';
+import startWebsocketServer from './websocket';
 
 const appStart = () => {
   startWebsocketServer();

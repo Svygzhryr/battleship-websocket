@@ -1,7 +1,10 @@
-import { WebSocket, WebSocketServer } from 'ws';
+import { WebSocketServer } from 'ws';
 import { httpServer } from '../http-server';
-import { ICommand } from '../types';
+
 import { commands } from '../commands';
+import { players } from '../storage';
+import { ICommand, ISocketData } from '../types';
+import { generatePlayerId } from '../utils';
 
 const startWebsocketServer = () => {
   const port = process.env.PORT || 3000;
@@ -15,12 +18,15 @@ const startWebsocketServer = () => {
 
   wss.on('connection', (ws) => {
     ws.on('message', (rawData) => {
-      console.log(wss.clients.size);
-      const command = JSON.parse(rawData.toString());
+      const data: ICommand = JSON.parse(rawData.toString());
+      const id = generatePlayerId();
+      const socketData = { data, ws, wss, id };
+
+      console.log(data.type);
       try {
-        commands[command.type.toUpperCase()](command, ws);
+        commands[data.type.toUpperCase()](socketData);
       } catch (err) {
-        console.error('Unknown command');
+        console.error('Unknown command:\n', err);
       }
     });
   });
@@ -29,7 +35,18 @@ const startWebsocketServer = () => {
     console.log('Websocket server is now closed.');
   });
 
+  wss.clients.forEach((client) => {
+    client.on('close', () => {
+      console.log(client.url, 'closed');
+      // playerData.splice(??, ??)
+    });
+  });
+
   httpServer.listen(port);
+
+  httpServer.on('close', () => {
+    wss.close();
+  });
 };
 
 export default startWebsocketServer;
