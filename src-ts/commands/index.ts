@@ -1,29 +1,30 @@
-import { WebSocket, WebSocketServer } from "ws";
+import { WebSocket, WebSocketServer } from 'ws';
 
-import { ICommand, IPlayer, IRoom, ISocketData } from "../types";
-import { players, winners, rooms } from "../storage";
-import { generatePlayerId, generateRoomId } from "../utils";
-import { updateRooms, updateWinners } from "./utility";
+import { ICommand, IUser, IRoom, ISocketData } from '../types';
+import { users, winners, rooms } from '../storage';
+import { findRoom, findUser, generatePlayerId, generateRoomId } from '../utils';
+import { createGame, updateRooms, updateWinners } from './utility';
 
 const REG = (socketData: ISocketData) => {
   const { data, ws, wss, id } = socketData;
-  console.log(">>reg", data);
-  const user: IPlayer = JSON.parse(data.data);
+  console.log('>>reg', data);
+  const user: IUser = JSON.parse(data.data);
   user.id = id;
-  players.push(user);
+  user.ws = ws;
+  users.push(user);
 
-  const responseData = JSON.stringify({
-    type: "reg",
+  const formResponse = JSON.stringify({
+    type: 'reg',
     data: JSON.stringify({
       name: user.name,
       index: id,
       error: false,
-      errorText: "",
+      errorText: ''
     }),
-    id: 0,
+    id: 0
   });
 
-  ws.send(responseData);
+  ws.send(formResponse);
   updateRooms(wss);
   updateWinners(wss);
 };
@@ -33,78 +34,73 @@ const ADD_USER_TO_ROOM = (socketData: ISocketData, roomId: string) => {
 
   if (!roomId) {
     roomId = JSON.parse(data.data).indexRoom;
-    console.log(">>addUserToRoom", data);
   }
 
-  rooms.find((room) => {
-    room.roomId === roomId;
-    room.roomUsers.push();
-  });
+  const currentRoom = findRoom(roomId);
+  const currentRoomUsers = currentRoom.roomUsers;
+  const { name, id: index } = findUser(id);
 
-  const responseData = JSON.stringify({
-    type: "add_user_to_room",
-    data: JSON.stringify({
-      indexRoom: roomId,
-    }),
+  if (!currentRoomUsers.find((user) => user.index === index)) {
+    currentRoomUsers.push({ name, index });
+  }
 
-    id: 0,
-  });
-
-  ws.send(responseData);
   updateRooms(wss);
+
+  if (currentRoomUsers.length > 1) {
+    createGame(socketData, roomId);
+    const currentRoomIndex = rooms.findIndex((room) => room.roomId === roomId);
+    rooms.splice(currentRoomIndex, 1);
+  }
 };
 
 const CREATE_ROOM = (socketData: ISocketData) => {
   const { data, ws, wss, id } = socketData;
-  console.log(id);
-  console.log(">>createRoom", data);
 
-  const foundPlayer = players.find((player) => player.id === id);
-  console.log(">> found player", foundPlayer);
+  const foundPlayer = findUser(id);
   const roomId = generateRoomId();
   const newRoom: IRoom = {
     roomId,
     roomUsers: [
-      // get socket id and use here
       {
         name: foundPlayer.name,
-        index: foundPlayer.id,
-      },
-    ],
+        index: foundPlayer.id
+      }
+    ]
   };
   rooms.push(newRoom);
-  ADD_USER_TO_ROOM(socketData, roomId);
   updateRooms(wss);
 };
 
 const ADD_SHIPS = (socketData: ISocketData) => {
-  console.log("add ships");
+  const { data, ws, wss, id } = socketData;
+  console.log(data);
 };
 
 const ATTACK = (socketData: ISocketData) => {
-  console.log("attack");
+  console.log('attack');
 };
 
 const RANDOM_ATTACK = (socketData: ISocketData) => {
-  console.log("randomAttack");
+  console.log('randomAttack');
 };
 
 const TURN = (socketData: ISocketData) => {
-  console.log("turn");
+  console.log('turn');
 };
 
 const FINISH = (socketData: ISocketData) => {
-  console.log("finish");
+  console.log('finish');
 };
 
 export const commands: Record<
   string,
   (socketData: ISocketData, roomId?: string) => void
 > = {
-  REG,
+  ADD_SHIPS,
   ADD_USER_TO_ROOM,
-  CREATE_ROOM,
-  TURN,
   ATTACK,
+  CREATE_ROOM,
   FINISH,
+  REG,
+  TURN
 };

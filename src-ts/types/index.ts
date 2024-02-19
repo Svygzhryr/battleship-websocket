@@ -1,9 +1,10 @@
 import { WebSocketServer, WebSocket } from 'ws';
 
-export interface IPlayer {
+export interface IUser {
   name: string;
   password: string;
   id?: string;
+  ws: WebSocket;
 }
 
 export interface ICommand {

@@ -1,3 +1,5 @@
+import { rooms, uniqueRoomIds, uniqueUserIds, users } from '../storage';
+
 const crnd = (min: number, max: number) => {
   return (Math.random() * (max - min) + min).toFixed();
 };
@@ -6,14 +8,33 @@ export const generateRoomId = () => {
   const prefix = 'abcde'[+crnd(0, 4)];
   const middle = crnd(10, 100);
   const postfix = 'xyz'[+crnd(0, 2)];
-  return `${prefix}${middle}${postfix}`;
+  const result = `${prefix}${middle}${postfix}`;
+
+  if (uniqueRoomIds.includes(result)) {
+    generateRoomId();
+  } else {
+    uniqueRoomIds.push(result);
+    return result;
+  }
 };
 
 export const generatePlayerId = () => {
-  let id = '';
-  while (id.length < 6) {
+  let result = '';
+  while (result.length < 6) {
     const segment = 'mnopq'[+crnd(0, 2)] + crnd(0, 9);
-    id += segment;
+    result += segment;
   }
-  return id;
+
+  if (uniqueUserIds.includes(result)) {
+    generatePlayerId();
+  } else {
+    uniqueUserIds.push(result);
+    return result;
+  }
 };
+
+export const findUser = (id: string) =>
+  users.find((player) => player.id === id);
+
+export const findRoom = (roomId: string) =>
+  rooms.find((room) => room.roomId === roomId);
