@@ -1,9 +1,15 @@
 import { WebSocket, WebSocketServer } from 'ws';
 
-import { ICommand, IUser, IRoom, ISocketData } from '../types';
-import { users, winners, rooms } from '../storage';
+import {
+  ICommand,
+  IUser,
+  IRoom,
+  ISocketData,
+  IActiveGamePlayer
+} from '../types';
+import { users, winners, rooms, currentGames } from '../storage';
 import { findRoom, findUser, generatePlayerId, generateRoomId } from '../utils';
-import { createGame, updateRooms, updateWinners } from './utility';
+import { createGame, startGame, updateRooms, updateWinners } from './utility';
 
 const REG = (socketData: ISocketData) => {
   const { data, ws, wss, id } = socketData;
@@ -47,7 +53,7 @@ const ADD_USER_TO_ROOM = (socketData: ISocketData, roomId: string) => {
   updateRooms(wss);
 
   if (currentRoomUsers.length > 1) {
-    createGame(socketData, roomId);
+    createGame(roomId);
     const currentRoomIndex = rooms.findIndex((room) => room.roomId === roomId);
     rooms.splice(currentRoomIndex, 1);
   }
@@ -73,7 +79,15 @@ const CREATE_ROOM = (socketData: ISocketData) => {
 
 const ADD_SHIPS = (socketData: ISocketData) => {
   const { data, ws, wss, id } = socketData;
-  console.log(data);
+  const playerData = JSON.parse(data.data) as IActiveGamePlayer;
+  const { gameId } = playerData;
+
+  const currentGame = currentGames.find((game) => game.roomId === gameId);
+  currentGame.players.push(playerData);
+
+  if (currentGame.players.length > 1) {
+    startGame(currentGame);
+  }
 };
 
 const ATTACK = (socketData: ISocketData) => {

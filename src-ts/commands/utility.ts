@@ -1,8 +1,9 @@
 // for the convenience i moved here functions
 // that are only invoked on a server side
 import { WebSocket, WebSocketServer } from 'ws';
-import { rooms, users, winners } from '../storage';
-import { ISocketData } from '../types';
+
+import { currentGames, rooms, users, winners } from '../storage';
+import { IActiveGame, IActiveGamePlayer, ISocketData } from '../types';
 import { findUser, findRoom } from '../utils';
 
 export const updateWinners = (wss: WebSocketServer) => {
@@ -28,9 +29,7 @@ export const updateRooms = (wss: WebSocketServer) => {
   });
 };
 
-export const createGame = (socketData: ISocketData, roomId: string) => {
-  const { data, ws, wss, id } = socketData;
-
+export const createGame = (roomId: string) => {
   const currentRoom = findRoom(roomId);
   const currentRoomPlayers = currentRoom.roomUsers;
 
@@ -47,6 +46,30 @@ export const createGame = (socketData: ISocketData, roomId: string) => {
 
     thisPlayersWebSocket.send(formResponse);
   });
+
+  const currentGame = {
+    roomId,
+    players: [] as IActiveGamePlayer[]
+  };
+
+  currentGames.push(currentGame);
 };
 
-export const startGame = () => {};
+export const startGame = (currentGame: IActiveGame) => {
+  currentGame.players.forEach((player) => {
+    const { indexPlayer, ships } = player;
+    const currentPlayer = findUser(indexPlayer);
+    const currentPlayerWebsocket = currentPlayer.ws;
+
+    const formResponse = JSON.stringify({
+      type: 'start_game',
+      data: JSON.stringify({
+        ships: [...ships],
+        currentPlayerIndex: indexPlayer
+      }),
+      id: 0
+    });
+
+    currentPlayerWebsocket.send(formResponse);
+  });
+};
