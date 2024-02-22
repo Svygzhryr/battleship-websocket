@@ -4,9 +4,12 @@ import { WebSocket, WebSocketServer } from 'ws';
 
 import { currentGames, rooms, users, winners } from '../storage';
 import { IActiveGame, IActiveGamePlayer, ISocketData } from '../types';
-import { findUser, findRoom, getCurrentGameWebsockets } from '../utils';
-
-let turnCount = 0;
+import {
+  findUser,
+  findRoom,
+  getCurrentGameWebsockets,
+  generatePlayerBoard
+} from '../utils';
 
 export const updateWinners = (wss: WebSocketServer) => {
   console.log('update_winners');
@@ -83,6 +86,15 @@ export const startGame = (currentGame: IActiveGame) => {
   });
 
   currentGame.players.forEach((player) => {
+    player.board = JSON.parse(
+      JSON.stringify(Array(10).fill(Array(10).fill(false)))
+    );
+    player.hitBoard = JSON.parse(
+      JSON.stringify(Array(10).fill(Array(10).fill(false)))
+    );
+
+    generatePlayerBoard(player);
+
     const currentPlayer = findUser(player.indexPlayer);
     const currentPlayerWebsocket = currentPlayer.ws;
     updateTurn(
@@ -117,24 +129,32 @@ export const updateTurn = (
 
 export const attackFeedback = (
   currentGame: IActiveGame,
-  indexPlayer: string
+  indexPlayer: string,
+  board: boolean[][],
+  x: number,
+  y: number
 ) => {
   const currentGameWebsockets = getCurrentGameWebsockets(currentGame);
+  let status = 'miss';
+  if (board[y][x]) {
+    status = 'shot';
+  }
   currentGameWebsockets.forEach((ws) => {
     const formResponse = JSON.stringify({
       type: 'attack',
       data: JSON.stringify({
         position: {
-          x: 0,
-          y: 0
+          x,
+          y
         },
         currentPlayer: indexPlayer,
-        status: 'miss'
+        status
       }),
       id: 0
     });
 
     ws.send(formResponse);
+    // не менять ход если игрок попал в корабль
     updateTurn(currentGame, indexPlayer, ws);
   });
 };

@@ -1,7 +1,7 @@
 import WebSocket from 'ws';
 
 import { rooms, uniqueRoomIds, uniqueUserIds, users } from '../storage';
-import { IActiveGame } from '../types';
+import { IActiveGame, IActiveGamePlayer } from '../types';
 
 const crnd = (min: number, max: number) => {
   return (Math.random() * (max - min) + min).toFixed();
@@ -50,4 +50,23 @@ export const getCurrentGameWebsockets = (currentGame: IActiveGame) => {
   });
 
   return currentGameWebsockets;
+};
+
+export const generatePlayerBoard = (player: IActiveGamePlayer) => {
+  player.ships.forEach((ship) => {
+    const { board } = player;
+    const {
+      position: { x, y },
+      direction,
+      length
+    } = ship;
+
+    let i;
+    direction ? (i = y) : (i = x);
+    const shipEndCoordinate = i + length;
+    while (i < shipEndCoordinate) {
+      board[direction ? i : y][direction ? x : i] = true;
+      i++;
+    }
+  });
 };

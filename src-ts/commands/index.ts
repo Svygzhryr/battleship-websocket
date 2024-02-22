@@ -109,8 +109,15 @@ const ATTACK = (socketData: ISocketData) => {
   const { data } = socketData;
   const { indexPlayer, gameId, x, y } = JSON.parse(data.data) as IAttack;
   const currentGame = currentGames.find((game) => game.roomId === gameId);
-  if (currentGame.idOfPlayersTurn === indexPlayer) {
-    attackFeedback(currentGame, indexPlayer);
+  // борда здесь сейчас ТЕКУЩЕГО игрока, а не противника
+  // нужно чтобы сюда передавалась расположение кораблей противника
+  const { board, hitBoard } = currentGame.players.find(
+    (player) => player.indexPlayer === indexPlayer
+  );
+
+  if (currentGame.idOfPlayersTurn === indexPlayer && !hitBoard[y][x]) {
+    hitBoard[y][x] = true;
+    attackFeedback(currentGame, indexPlayer, board, x, y);
   }
 };
 

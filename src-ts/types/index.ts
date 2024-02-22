@@ -41,20 +41,20 @@ export interface IRoom {
 }
 
 export interface IShip {
-  ship: {
-    position: {
-      x: number;
-      y: number;
-    };
-    direction: boolean;
-    type: string;
-    length: number;
+  position: {
+    x: number;
+    y: number;
   };
+  direction: boolean;
+  type: string;
+  length: number;
 }
 
 export interface IActiveGamePlayer {
   gameId: string;
   indexPlayer: string;
+  board: boolean[][];
+  hitBoard: boolean[][];
   ships: IShip[];
 }
 
