@@ -1,4 +1,7 @@
+import WebSocket from 'ws';
+
 import { rooms, uniqueRoomIds, uniqueUserIds, users } from '../storage';
+import { IActiveGame } from '../types';
 
 const crnd = (min: number, max: number) => {
   return (Math.random() * (max - min) + min).toFixed();
@@ -38,3 +41,13 @@ export const findUser = (id: string) =>
 
 export const findRoom = (roomId: string) =>
   rooms.find((room) => room.roomId === roomId);
+
+export const getCurrentGameWebsockets = (currentGame: IActiveGame) => {
+  const currentGameWebsockets: WebSocket[] = [];
+  currentGame.players.forEach((player) => {
+    const playerWebSocket = findUser(player.indexPlayer).ws;
+    currentGameWebsockets.push(playerWebSocket);
+  });
+
+  return currentGameWebsockets;
+};

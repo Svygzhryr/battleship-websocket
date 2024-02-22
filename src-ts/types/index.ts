@@ -60,5 +60,22 @@ export interface IActiveGamePlayer {
 
 export interface IActiveGame {
   roomId: string;
+  idOfPlayersTurn?: string;
   players: IActiveGamePlayer[];
+}
+
+export interface IAttack {
+  gameId: string;
+  indexPlayer: string;
+  x: number;
+  y: number;
+}
+
+export interface IAttackFeedback {
+  position: {
+    x: number;
+    y: number;
+  };
+  currentPlayer: string;
+  status: 'miss' | 'killed' | 'shot';
 }

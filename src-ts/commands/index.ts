@@ -5,11 +5,19 @@ import {
   IUser,
   IRoom,
   ISocketData,
-  IActiveGamePlayer
+  IActiveGamePlayer,
+  IAttack
 } from '../types';
 import { users, winners, rooms, currentGames } from '../storage';
 import { findRoom, findUser, generatePlayerId, generateRoomId } from '../utils';
-import { createGame, startGame, updateRooms, updateWinners } from './utility';
+import {
+  attackFeedback,
+  createGame,
+  startGame,
+  updateRooms,
+  updateTurn,
+  updateWinners
+} from './utility';
 
 const REG = (socketData: ISocketData) => {
   const { data, ws, wss, id } = socketData;
@@ -17,7 +25,6 @@ const REG = (socketData: ISocketData) => {
   const user: IUser = JSON.parse(data.data);
   user.id = id;
   user.ws = ws;
-  users.push(user);
 
   const formResponse = JSON.stringify({
     type: 'reg',
@@ -30,13 +37,20 @@ const REG = (socketData: ISocketData) => {
     id: 0
   });
 
-  ws.send(formResponse);
-  updateRooms(wss);
-  updateWinners(wss);
+  const doesUserExist = users.find((item) => item.name === user.name);
+
+  if (!doesUserExist) {
+    ws.send(formResponse);
+    updateRooms(wss);
+    updateWinners(wss);
+    users.push(user);
+  } else {
+    console.error('User with this username already exists!');
+  }
 };
 
 const ADD_USER_TO_ROOM = (socketData: ISocketData, roomId: string) => {
-  const { data, ws, wss, id } = socketData;
+  const { data, wss, id } = socketData;
 
   if (!roomId) {
     roomId = JSON.parse(data.data).indexRoom;
@@ -60,7 +74,7 @@ const ADD_USER_TO_ROOM = (socketData: ISocketData, roomId: string) => {
 };
 
 const CREATE_ROOM = (socketData: ISocketData) => {
-  const { data, ws, wss, id } = socketData;
+  const { wss, id } = socketData;
 
   const foundPlayer = findUser(id);
   const roomId = generateRoomId();
@@ -78,9 +92,10 @@ const CREATE_ROOM = (socketData: ISocketData) => {
 };
 
 const ADD_SHIPS = (socketData: ISocketData) => {
-  const { data, ws, wss, id } = socketData;
+  const { data } = socketData;
   const playerData = JSON.parse(data.data) as IActiveGamePlayer;
   const { gameId } = playerData;
+  console.log('>>> THIS PLAYER ADDED SHIPS', playerData.indexPlayer);
 
   const currentGame = currentGames.find((game) => game.roomId === gameId);
   currentGame.players.push(playerData);
@@ -91,15 +106,18 @@ const ADD_SHIPS = (socketData: ISocketData) => {
 };
 
 const ATTACK = (socketData: ISocketData) => {
-  console.log('attack');
+  const { data } = socketData;
+  const { indexPlayer, gameId, x, y } = JSON.parse(data.data) as IAttack;
+  const currentGame = currentGames.find((game) => game.roomId === gameId);
+  if (currentGame.idOfPlayersTurn === indexPlayer) {
+    attackFeedback(currentGame, indexPlayer);
+  }
 };
 
-const RANDOM_ATTACK = (socketData: ISocketData) => {
-  console.log('randomAttack');
-};
-
-const TURN = (socketData: ISocketData) => {
-  console.log('turn');
+const RANDOMATTACK = (socketData: ISocketData) => {
+  const { data } = socketData;
+  console.log(data.data);
+  console.log('random_attack');
 };
 
 const FINISH = (socketData: ISocketData) => {
@@ -116,5 +134,5 @@ export const commands: Record<
   CREATE_ROOM,
   FINISH,
   REG,
-  TURN
+  RANDOMATTACK
 };
