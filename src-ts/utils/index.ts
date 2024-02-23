@@ -3,8 +3,8 @@ import WebSocket from 'ws';
 import { rooms, uniqueRoomIds, uniqueUserIds, users } from '../storage';
 import { IActiveGame, IActiveGamePlayer } from '../types';
 
-const crnd = (min: number, max: number) => {
-  return (Math.random() * (max - min) + min).toFixed();
+export const crnd = (min: number, max: number) => {
+  return +(Math.random() * (max - min) + min).toFixed();
 };
 
 export const generateRoomId = () => {
@@ -42,6 +42,14 @@ export const findUser = (id: string) =>
 export const findRoom = (roomId: string) =>
   rooms.find((room) => room.roomId === roomId);
 
+export const findEnemy = (
+  currentGame: IActiveGame,
+  currentPlayerId: string
+) => {
+  const { players } = currentGame;
+  return players.filter((player) => player.indexPlayer !== currentPlayerId)[0];
+};
+
 export const getCurrentGameWebsockets = (currentGame: IActiveGame) => {
   const currentGameWebsockets: WebSocket[] = [];
   currentGame.players.forEach((player) => {
@@ -69,4 +77,17 @@ export const generatePlayerBoard = (player: IActiveGamePlayer) => {
       i++;
     }
   });
+};
+
+export const findCellToAttack = (hitBoard: boolean[][]) => {
+  let x, y;
+  x = crnd(0, 9);
+  y = crnd(0, 9);
+  if (hitBoard[y][x]) {
+    // а если тут заканчиваются клетки?
+    findCellToAttack(hitBoard);
+  } else {
+    console.log('found coords', x, y);
+    return { x, y };
+  }
 };

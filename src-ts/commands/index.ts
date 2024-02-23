@@ -9,7 +9,15 @@ import {
   IAttack
 } from '../types';
 import { users, winners, rooms, currentGames } from '../storage';
-import { findRoom, findUser, generatePlayerId, generateRoomId } from '../utils';
+import {
+  crnd,
+  findCellToAttack,
+  findEnemy,
+  findRoom,
+  findUser,
+  generatePlayerId,
+  generateRoomId
+} from '../utils';
 import {
   attackFeedback,
   createGame,
@@ -109,22 +117,26 @@ const ATTACK = (socketData: ISocketData) => {
   const { data } = socketData;
   const { indexPlayer, gameId, x, y } = JSON.parse(data.data) as IAttack;
   const currentGame = currentGames.find((game) => game.roomId === gameId);
-  // борда здесь сейчас ТЕКУЩЕГО игрока, а не противника
-  // нужно чтобы сюда передавалась расположение кораблей противника
-  const { board, hitBoard } = currentGame.players.find(
-    (player) => player.indexPlayer === indexPlayer
-  );
+  const { board, hitBoard } = findEnemy(currentGame, indexPlayer);
 
   if (currentGame.idOfPlayersTurn === indexPlayer && !hitBoard[y][x]) {
     hitBoard[y][x] = true;
-    attackFeedback(currentGame, indexPlayer, board, x, y);
+    attackFeedback(currentGame, indexPlayer, board, hitBoard, x, y);
   }
 };
 
 const RANDOMATTACK = (socketData: ISocketData) => {
   const { data } = socketData;
-  console.log(data.data);
-  console.log('random_attack');
+  const { indexPlayer, gameId } = JSON.parse(data.data) as IAttack;
+  const currentGame = currentGames.find((game) => game.roomId === gameId);
+  const { board, hitBoard } = findEnemy(currentGame, indexPlayer);
+
+  const { x, y } = findCellToAttack(hitBoard);
+
+  if (currentGame.idOfPlayersTurn === indexPlayer && !hitBoard[y][x]) {
+    hitBoard[y][x] = true;
+    attackFeedback(currentGame, indexPlayer, board, hitBoard, x, y);
+  }
 };
 
 const FINISH = (socketData: ISocketData) => {

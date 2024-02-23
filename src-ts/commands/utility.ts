@@ -8,7 +8,8 @@ import {
   findUser,
   findRoom,
   getCurrentGameWebsockets,
-  generatePlayerBoard
+  generatePlayerBoard,
+  findEnemy
 } from '../utils';
 
 export const updateWinners = (wss: WebSocketServer) => {
@@ -107,20 +108,21 @@ export const startGame = (currentGame: IActiveGame) => {
 
 export const updateTurn = (
   currentGame: IActiveGame,
-  id: string,
-  ws: WebSocket
+  indexPlayer: string,
+  ws: WebSocket,
+  isLanded = false
 ) => {
-  const currentGamePlayers = currentGame.players;
-  const nextPlayerId = currentGamePlayers.filter(
-    (player) => player.indexPlayer !== id
-  )[0].indexPlayer;
-  currentGame.idOfPlayersTurn = nextPlayerId;
+  if (!isLanded) {
+    const nextPlayer = findEnemy(currentGame, indexPlayer);
+    ({ indexPlayer } = nextPlayer);
+  }
   console.log('turn');
-  console.log('>>> WHOSE TURN NOW?', nextPlayerId);
+  console.log('>>> WHOSE TURN NOW?', indexPlayer);
+  currentGame.idOfPlayersTurn = indexPlayer;
   const formResponse = JSON.stringify({
     type: 'turn',
     data: JSON.stringify({
-      currentPlayer: nextPlayerId
+      currentPlayer: indexPlayer
     }),
     id: 0
   });
@@ -131,14 +133,70 @@ export const attackFeedback = (
   currentGame: IActiveGame,
   indexPlayer: string,
   board: boolean[][],
+  hitBoard: boolean[][],
   x: number,
   y: number
 ) => {
   const currentGameWebsockets = getCurrentGameWebsockets(currentGame);
+  const { ships } = currentGame.players.find(
+    (player) => player.indexPlayer === indexPlayer
+  );
+
   let status = 'miss';
+  let isLanded = false;
+  // если попали по кораблю - ищем в массиве кораблей совпадаюбщие координаты
+  // если есть корабль - определяем его тип и проверяем смежные координаты от начальной и дальше по алгоритму
   if (board[y][x]) {
     status = 'shot';
+    isLanded = true;
+
+    console.log(ships);
+
+    ships.forEach((ship) => {
+      const {
+        length,
+        direction,
+        position: { x: x1, y: y1 }
+      } = ship;
+
+      const thisShipTakenShots = [];
+      const shotsToKill = length;
+
+      let i;
+      direction ? (i = y1) : (i = x1);
+      const shipEndCoordinate = i + length;
+      while (i < shipEndCoordinate) {
+        if (hitBoard[direction ? i : y1][direction ? x1 : i] === true) {
+          thisShipTakenShots.push({ x1, y1 });
+        }
+        i++;
+      }
+
+      if (thisShipTakenShots.length === shotsToKill) {
+        thisShipTakenShots.forEach((shot) => {
+          const { x1, y1 } = shot;
+
+          currentGameWebsockets.forEach((ws) => {
+            const formResponse = JSON.stringify({
+              type: 'attack',
+              data: JSON.stringify({
+                position: {
+                  x: x1,
+                  y: y1
+                },
+                currentPlayer: indexPlayer,
+                status
+              }),
+              id: 0
+            });
+
+            ws.send(formResponse);
+          });
+        });
+      }
+    });
   }
+
   currentGameWebsockets.forEach((ws) => {
     const formResponse = JSON.stringify({
       type: 'attack',
@@ -155,6 +213,6 @@ export const attackFeedback = (
 
     ws.send(formResponse);
     // не менять ход если игрок попал в корабль
-    updateTurn(currentGame, indexPlayer, ws);
+    updateTurn(currentGame, indexPlayer, ws, isLanded);
   });
 };
