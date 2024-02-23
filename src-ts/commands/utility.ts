@@ -144,8 +144,6 @@ export const attackFeedback = (
 
   let status = 'miss';
   let isLanded = false;
-  // если попали по кораблю - ищем в массиве кораблей совпадаюбщие координаты
-  // если есть корабль - определяем его тип и проверяем смежные координаты от начальной и дальше по алгоритму
   if (board[y][x]) {
     status = 'shot';
     isLanded = true;
@@ -172,6 +170,9 @@ export const attackFeedback = (
         i++;
       }
 
+      // странное поведение скана кораблей после попадания
+      // должны проверяться и уничтожаться клетки того корабля, у которого
+      // количество попаданий === его длине
       if (thisShipTakenShots.length === shotsToKill) {
         thisShipTakenShots.forEach((shot) => {
           const { x1, y1 } = shot;
@@ -212,7 +213,6 @@ export const attackFeedback = (
     });
 
     ws.send(formResponse);
-    // не менять ход если игрок попал в корабль
     updateTurn(currentGame, indexPlayer, ws, isLanded);
   });
 };
