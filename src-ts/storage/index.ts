@@ -1,6 +1,6 @@
-import { IActiveGame, IRoom } from '../types';
-import { IWinner } from '../types';
-import { IUser } from '../types';
+import { IActiveGame, IRoom } from "../types";
+import { IWinner } from "../types";
+import { IUser } from "../types";
 
 export const uniqueUserIds: string[] = [];
 export const uniqueRoomIds: string[] = [];

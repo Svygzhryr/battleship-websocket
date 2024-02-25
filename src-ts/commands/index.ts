@@ -32,6 +32,7 @@ const REG = (socketData: ISocketData) => {
   const { data, ws, wss, id } = socketData;
   console.log(">>reg", data);
   const user: IUser = JSON.parse(data.data);
+  user.id = id;
   user.ws = ws;
 
   const doesUserExist = users.find((item) => item.name === user.name);

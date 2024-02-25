@@ -71,6 +71,7 @@ export const startGame = (currentGame: IActiveGame) => {
     player.hitBoard = JSON.parse(
       JSON.stringify(Array(10).fill(Array(10).fill(false)))
     );
+    player.shipsWrecked = 0;
 
     generatePlayerBoard(player);
 
@@ -109,10 +110,9 @@ export const attackFeedback = (
   y: number,
   wss: WebSocketServer
 ) => {
-  let isKilled = false;
-  let wreckedShips = 0;
   const currentGameWebsockets = getCurrentGameWebsockets(currentGame);
-  const { ships } = findEnemy(currentGame, indexPlayer);
+  const enemyPlayer = findEnemy(currentGame, indexPlayer);
+  const { ships } = enemyPlayer;
 
   let status = "miss";
   let isLanded = false;
@@ -120,12 +120,18 @@ export const attackFeedback = (
     status = "shot";
     isLanded = true;
 
+    currentGameWebsockets.forEach((ws) => {
+      ws.send(attackFeedbackResponse(x, y, indexPlayer, status));
+      updateTurn(currentGame, indexPlayer, ws, isLanded);
+    });
+
     ships.forEach((ship) => {
       const {
         length,
         direction,
         position: { x: x1, y: y1 },
       } = ship;
+      if (ship.isWrecked) return;
 
       const thisShipTakenShots: { x1: number; y1: number }[] = [];
       const shotsToKill = length;
@@ -135,9 +141,6 @@ export const attackFeedback = (
       const shipEndCoordinate = i + length;
 
       while (i < shipEndCoordinate) {
-        if (length === 4) {
-          console.log(hitBoard[direction ? i : y1][direction ? x1 : i]);
-        }
         if (hitBoard[direction ? i : y1][direction ? x1 : i]) {
           thisShipTakenShots.push({
             x1: direction ? x1 : i,
@@ -147,33 +150,24 @@ export const attackFeedback = (
         i++;
       }
 
-      console.log(thisShipTakenShots);
       if (thisShipTakenShots.length === shotsToKill) {
-        isKilled = true;
-        // корабли уничтожаются каждый раз))
-        // надо дать полю понять что разносить надо только те корабли, которые мы уничтожили с последним кликом
+        ship.isWrecked = true;
+        enemyPlayer.shipsWrecked++;
+
+        if (enemyPlayer.shipsWrecked === 10) {
+          finishGame(wss, currentGameWebsockets, currentGame, indexPlayer);
+        }
+
         currentGameWebsockets.forEach((ws) => {
           thisShipTakenShots.forEach((cell) => {
             const { x1, y1 } = cell;
             ws.send(attackFeedbackResponse(x1, y1, indexPlayer, "killed"));
           });
-
-          wreckedShips++;
-          if (wreckedShips === 10) {
-            currentGameWebsockets.forEach((ws) => {
-              ws.send(finishResponse(indexPlayer));
-            });
-            updateWinners(wss);
-            return;
-          }
-
           updateTurn(currentGame, indexPlayer, ws, isLanded);
         });
       }
     });
-  }
-
-  if (!isKilled) {
+  } else {
     currentGameWebsockets.forEach((ws) => {
       ws.send(attackFeedbackResponse(x, y, indexPlayer, status));
       updateTurn(currentGame, indexPlayer, ws, isLanded);
@@ -181,4 +175,34 @@ export const attackFeedback = (
   }
 };
 
-export const finishGame = (wss: WebSocketServer) => {};
+export const finishGame = (
+  wss: WebSocketServer,
+  currentGameWebsockets: WebSocket[],
+  currentGame: IActiveGame,
+  indexPlayer: string
+) => {
+  const winner = findUser(indexPlayer);
+  const id = currentGame.roomId;
+  currentGames.splice(
+    currentGames.findIndex((game) => game.roomId === id),
+    1
+  );
+  rooms.splice(
+    rooms.findIndex((room) => room.roomId === id),
+    1
+  );
+
+  const foundWinner = winners.find((user) => user.name === winner.name);
+
+  if (foundWinner) {
+    foundWinner.wins++;
+  } else {
+    winners.push({ name: winner.name, wins: 1 });
+  }
+
+  currentGameWebsockets.forEach((ws) => {
+    ws.send(finishResponse(indexPlayer));
+  });
+  updateWinners(wss);
+  updateRooms(wss);
+};

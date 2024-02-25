@@ -1,4 +1,4 @@
-import { WebSocketServer, WebSocket } from 'ws';
+import { WebSocketServer, WebSocket } from "ws";
 
 export interface IUser {
   name: string;
@@ -48,6 +48,7 @@ export interface IShip {
   direction: boolean;
   type: string;
   length: number;
+  isWrecked?: boolean;
 }
 
 export interface IActiveGamePlayer {
@@ -56,6 +57,7 @@ export interface IActiveGamePlayer {
   board: boolean[][];
   hitBoard: boolean[][];
   ships: IShip[];
+  shipsWrecked: number;
 }
 
 export interface IActiveGame {
@@ -77,5 +79,5 @@ export interface IAttackFeedback {
     y: number;
   };
   currentPlayer: string;
-  status: 'miss' | 'killed' | 'shot';
+  status: "miss" | "killed" | "shot";
 }

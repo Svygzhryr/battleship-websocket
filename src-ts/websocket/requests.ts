@@ -70,8 +70,9 @@ export const attackFeedbackResponse = (
   y: number,
   indexPlayer: string,
   status: string
-) =>
-  JSON.stringify({
+) => {
+  console.log(status);
+  return JSON.stringify({
     type: "attack",
     data: JSON.stringify({
       position: {
@@ -83,6 +84,7 @@ export const attackFeedbackResponse = (
     }),
     id: 0,
   });
+};
 
 export const finishResponse = (indexPlayer: string) =>
   JSON.stringify({
