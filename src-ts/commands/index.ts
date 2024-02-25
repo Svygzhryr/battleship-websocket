@@ -1,4 +1,4 @@
-import { WebSocket, WebSocketServer } from 'ws';
+import { WebSocket, WebSocketServer } from "ws";
 
 import {
   ICommand,
@@ -6,9 +6,9 @@ import {
   IRoom,
   ISocketData,
   IActiveGamePlayer,
-  IAttack
-} from '../types';
-import { users, winners, rooms, currentGames } from '../storage';
+  IAttack,
+} from "../types";
+import { users, winners, rooms, currentGames } from "../storage";
 import {
   crnd,
   findCellToAttack,
@@ -16,44 +16,33 @@ import {
   findRoom,
   findUser,
   generatePlayerId,
-  generateRoomId
-} from '../utils';
+  generateRoomId,
+} from "../utils";
 import {
   attackFeedback,
   createGame,
   startGame,
   updateRooms,
   updateTurn,
-  updateWinners
-} from './utility';
+  updateWinners,
+} from "./utility";
+import { registerResponse } from "../websocket/requests";
 
 const REG = (socketData: ISocketData) => {
   const { data, ws, wss, id } = socketData;
-  console.log('>>reg', data);
+  console.log(">>reg", data);
   const user: IUser = JSON.parse(data.data);
-  user.id = id;
   user.ws = ws;
-
-  const formResponse = JSON.stringify({
-    type: 'reg',
-    data: JSON.stringify({
-      name: user.name,
-      index: id,
-      error: false,
-      errorText: ''
-    }),
-    id: 0
-  });
 
   const doesUserExist = users.find((item) => item.name === user.name);
 
   if (!doesUserExist) {
-    ws.send(formResponse);
+    ws.send(registerResponse(user));
     updateRooms(wss);
     updateWinners(wss);
     users.push(user);
   } else {
-    console.error('User with this username already exists!');
+    console.error("User with this username already exists!");
   }
 };
 
@@ -91,9 +80,9 @@ const CREATE_ROOM = (socketData: ISocketData) => {
     roomUsers: [
       {
         name: foundPlayer.name,
-        index: foundPlayer.id
-      }
-    ]
+        index: foundPlayer.id,
+      },
+    ],
   };
   rooms.push(newRoom);
   updateRooms(wss);
@@ -103,7 +92,7 @@ const ADD_SHIPS = (socketData: ISocketData) => {
   const { data } = socketData;
   const playerData = JSON.parse(data.data) as IActiveGamePlayer;
   const { gameId } = playerData;
-  console.log('>>> THIS PLAYER ADDED SHIPS', playerData.indexPlayer);
+  console.log(">>> THIS PLAYER ADDED SHIPS", playerData.indexPlayer);
 
   const currentGame = currentGames.find((game) => game.roomId === gameId);
   currentGame.players.push(playerData);
@@ -114,19 +103,19 @@ const ADD_SHIPS = (socketData: ISocketData) => {
 };
 
 const ATTACK = (socketData: ISocketData) => {
-  const { data } = socketData;
+  const { data, wss } = socketData;
   const { indexPlayer, gameId, x, y } = JSON.parse(data.data) as IAttack;
   const currentGame = currentGames.find((game) => game.roomId === gameId);
   const { board, hitBoard } = findEnemy(currentGame, indexPlayer);
 
   if (currentGame.idOfPlayersTurn === indexPlayer && !hitBoard[y][x]) {
     hitBoard[y][x] = true;
-    attackFeedback(currentGame, indexPlayer, board, hitBoard, x, y);
+    attackFeedback(currentGame, indexPlayer, board, hitBoard, x, y, wss);
   }
 };
 
 const RANDOMATTACK = (socketData: ISocketData) => {
-  const { data } = socketData;
+  const { data, wss } = socketData;
   const { indexPlayer, gameId } = JSON.parse(data.data) as IAttack;
   const currentGame = currentGames.find((game) => game.roomId === gameId);
   const { board, hitBoard } = findEnemy(currentGame, indexPlayer);
@@ -135,12 +124,8 @@ const RANDOMATTACK = (socketData: ISocketData) => {
 
   if (currentGame.idOfPlayersTurn === indexPlayer && !hitBoard[y][x]) {
     hitBoard[y][x] = true;
-    attackFeedback(currentGame, indexPlayer, board, hitBoard, x, y);
+    attackFeedback(currentGame, indexPlayer, board, hitBoard, x, y, wss);
   }
-};
-
-const FINISH = (socketData: ISocketData) => {
-  console.log('finish');
 };
 
 export const commands: Record<
@@ -151,7 +136,6 @@ export const commands: Record<
   ADD_USER_TO_ROOM,
   ATTACK,
   CREATE_ROOM,
-  FINISH,
   REG,
-  RANDOMATTACK
+  RANDOMATTACK,
 };

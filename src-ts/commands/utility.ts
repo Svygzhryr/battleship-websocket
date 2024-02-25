@@ -1,89 +1,67 @@
-// for the convenience i moved here functions
-// that are only invoked on a server side
-import { WebSocket, WebSocketServer } from 'ws';
+import { WebSocket, WebSocketServer } from "ws";
 
-import { currentGames, rooms, users, winners } from '../storage';
-import { IActiveGame, IActiveGamePlayer, ISocketData } from '../types';
+import { currentGames, rooms, users, winners } from "../storage";
+import { IActiveGame, IActiveGamePlayer, ISocketData } from "../types";
 import {
   findUser,
   findRoom,
   getCurrentGameWebsockets,
   generatePlayerBoard,
-  findEnemy
-} from '../utils';
+  findEnemy,
+} from "../utils";
+import {
+  attackFeedbackResponse,
+  createGameResponse,
+  finishResponse,
+  roomsUpdateResponse,
+  startGameResponse,
+  updateTurnResponse,
+  winnersResponse,
+} from "../websocket/requests";
 
 export const updateWinners = (wss: WebSocketServer) => {
-  console.log('update_winners');
-  const formResponse = JSON.stringify({
-    type: 'update_winners',
-    data: JSON.stringify(winners),
-    id: 0
-  });
-
+  console.log("update_winners");
   wss.clients.forEach((client) => {
-    client.send(formResponse);
+    client.send(winnersResponse(winners));
   });
 };
 
 export const updateRooms = (wss: WebSocketServer) => {
-  console.log('update_rooms');
+  console.log("update_rooms");
   wss.clients.forEach((client) => {
-    const formResponse = {
-      type: 'update_room',
-      data: JSON.stringify(rooms),
-      id: 0
-    };
-    client.send(JSON.stringify(formResponse));
+    client.send(roomsUpdateResponse(rooms));
   });
 };
 
 export const createGame = (roomId: string) => {
-  console.log('create_game');
+  console.log("create_game");
   const currentRoom = findRoom(roomId);
   const currentRoomPlayers = currentRoom.roomUsers;
 
   const currentGame = {
     roomId,
-    players: [] as IActiveGamePlayer[]
+    players: [] as IActiveGamePlayer[],
   };
 
   currentGames.push(currentGame);
 
   currentRoomPlayers.forEach((player) => {
     const thisPlayersWebSocket = findUser(player.index).ws;
-    console.log('>>> USER ID ON CREATE', player.index);
-    const formResponse = JSON.stringify({
-      type: 'create_game',
-      data: JSON.stringify({
-        idGame: roomId,
-        idPlayer: player.index
-      }),
-      id: 0
-    });
-
-    thisPlayersWebSocket.send(formResponse);
+    console.log(">>> USER ID ON CREATE", player.index);
+    thisPlayersWebSocket.send(createGameResponse(roomId, player));
   });
 };
 
 export const startGame = (currentGame: IActiveGame) => {
-  console.log('start_game');
+  console.log("start_game");
   let currentGamesWebsockets: WebSocket[] = [];
   currentGame.players.forEach((player) => {
     const { indexPlayer, ships } = player;
     const currentPlayer = findUser(indexPlayer);
     const currentPlayerWebsocket = currentPlayer.ws;
-    const formResponse = JSON.stringify({
-      type: 'start_game',
-      data: JSON.stringify({
-        ships: [...ships],
-        currentPlayerIndex: indexPlayer
-      }),
-      id: 0
-    });
-
     currentGamesWebsockets.push(currentPlayerWebsocket);
 
-    currentPlayerWebsocket.send(formResponse);
+    currentPlayerWebsocket.send(startGameResponse(ships, indexPlayer));
   });
 
   currentGame.players.forEach((player) => {
@@ -116,17 +94,10 @@ export const updateTurn = (
     const nextPlayer = findEnemy(currentGame, indexPlayer);
     ({ indexPlayer } = nextPlayer);
   }
-  console.log('turn');
-  console.log('>>> WHOSE TURN NOW?', indexPlayer);
+  console.log("turn");
+  console.log(">>> WHOSE TURN NOW?", indexPlayer);
   currentGame.idOfPlayersTurn = indexPlayer;
-  const formResponse = JSON.stringify({
-    type: 'turn',
-    data: JSON.stringify({
-      currentPlayer: indexPlayer
-    }),
-    id: 0
-  });
-  ws.send(formResponse);
+  ws.send(updateTurnResponse(indexPlayer));
 };
 
 export const attackFeedback = (
@@ -135,84 +106,79 @@ export const attackFeedback = (
   board: boolean[][],
   hitBoard: boolean[][],
   x: number,
-  y: number
+  y: number,
+  wss: WebSocketServer
 ) => {
+  let isKilled = false;
+  let wreckedShips = 0;
   const currentGameWebsockets = getCurrentGameWebsockets(currentGame);
-  const { ships } = currentGame.players.find(
-    (player) => player.indexPlayer === indexPlayer
-  );
+  const { ships } = findEnemy(currentGame, indexPlayer);
 
-  let status = 'miss';
+  let status = "miss";
   let isLanded = false;
   if (board[y][x]) {
-    status = 'shot';
+    status = "shot";
     isLanded = true;
-
-    console.log(ships);
 
     ships.forEach((ship) => {
       const {
         length,
         direction,
-        position: { x: x1, y: y1 }
+        position: { x: x1, y: y1 },
       } = ship;
 
-      const thisShipTakenShots = [];
+      const thisShipTakenShots: { x1: number; y1: number }[] = [];
       const shotsToKill = length;
 
       let i;
       direction ? (i = y1) : (i = x1);
       const shipEndCoordinate = i + length;
+
       while (i < shipEndCoordinate) {
-        if (hitBoard[direction ? i : y1][direction ? x1 : i] === true) {
-          thisShipTakenShots.push({ x1, y1 });
+        if (length === 4) {
+          console.log(hitBoard[direction ? i : y1][direction ? x1 : i]);
+        }
+        if (hitBoard[direction ? i : y1][direction ? x1 : i]) {
+          thisShipTakenShots.push({
+            x1: direction ? x1 : i,
+            y1: direction ? i : y1,
+          });
         }
         i++;
       }
 
-      // странное поведение скана кораблей после попадания
-      // должны проверяться и уничтожаться клетки того корабля, у которого
-      // количество попаданий === его длине
+      console.log(thisShipTakenShots);
       if (thisShipTakenShots.length === shotsToKill) {
-        thisShipTakenShots.forEach((shot) => {
-          const { x1, y1 } = shot;
-
-          currentGameWebsockets.forEach((ws) => {
-            const formResponse = JSON.stringify({
-              type: 'attack',
-              data: JSON.stringify({
-                position: {
-                  x: x1,
-                  y: y1
-                },
-                currentPlayer: indexPlayer,
-                status
-              }),
-              id: 0
-            });
-
-            ws.send(formResponse);
+        isKilled = true;
+        // корабли уничтожаются каждый раз))
+        // надо дать полю понять что разносить надо только те корабли, которые мы уничтожили с последним кликом
+        currentGameWebsockets.forEach((ws) => {
+          thisShipTakenShots.forEach((cell) => {
+            const { x1, y1 } = cell;
+            ws.send(attackFeedbackResponse(x1, y1, indexPlayer, "killed"));
           });
+
+          wreckedShips++;
+          if (wreckedShips === 10) {
+            currentGameWebsockets.forEach((ws) => {
+              ws.send(finishResponse(indexPlayer));
+            });
+            updateWinners(wss);
+            return;
+          }
+
+          updateTurn(currentGame, indexPlayer, ws, isLanded);
         });
       }
     });
   }
 
-  currentGameWebsockets.forEach((ws) => {
-    const formResponse = JSON.stringify({
-      type: 'attack',
-      data: JSON.stringify({
-        position: {
-          x,
-          y
-        },
-        currentPlayer: indexPlayer,
-        status
-      }),
-      id: 0
+  if (!isKilled) {
+    currentGameWebsockets.forEach((ws) => {
+      ws.send(attackFeedbackResponse(x, y, indexPlayer, status));
+      updateTurn(currentGame, indexPlayer, ws, isLanded);
     });
-
-    ws.send(formResponse);
-    updateTurn(currentGame, indexPlayer, ws, isLanded);
-  });
+  }
 };
+
+export const finishGame = (wss: WebSocketServer) => {};

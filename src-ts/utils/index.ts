@@ -1,16 +1,16 @@
-import WebSocket from 'ws';
+import WebSocket from "ws";
 
-import { rooms, uniqueRoomIds, uniqueUserIds, users } from '../storage';
-import { IActiveGame, IActiveGamePlayer } from '../types';
+import { rooms, uniqueRoomIds, uniqueUserIds, users } from "../storage";
+import { IActiveGame, IActiveGamePlayer } from "../types";
 
 export const crnd = (min: number, max: number) => {
   return +(Math.random() * (max - min) + min).toFixed();
 };
 
 export const generateRoomId = () => {
-  const prefix = 'abcde'[+crnd(0, 4)];
+  const prefix = "abcde"[+crnd(0, 4)];
   const middle = crnd(10, 100);
-  const postfix = 'xyz'[+crnd(0, 2)];
+  const postfix = "xyz"[+crnd(0, 2)];
   const result = `${prefix}${middle}${postfix}`;
 
   if (uniqueRoomIds.includes(result)) {
@@ -22,9 +22,9 @@ export const generateRoomId = () => {
 };
 
 export const generatePlayerId = () => {
-  let result = '';
+  let result = "";
   while (result.length < 6) {
-    const segment = 'mnopq'[+crnd(0, 2)] + crnd(0, 9);
+    const segment = "mnopq"[+crnd(0, 2)] + crnd(0, 9);
     result += segment;
   }
 
@@ -66,12 +66,13 @@ export const generatePlayerBoard = (player: IActiveGamePlayer) => {
     const {
       position: { x, y },
       direction,
-      length
+      length,
     } = ship;
 
     let i;
     direction ? (i = y) : (i = x);
     const shipEndCoordinate = i + length;
+
     while (i < shipEndCoordinate) {
       board[direction ? i : y][direction ? x : i] = true;
       i++;
@@ -83,11 +84,10 @@ export const findCellToAttack = (hitBoard: boolean[][]) => {
   let x, y;
   x = crnd(0, 9);
   y = crnd(0, 9);
-  if (hitBoard[y][x]) {
+  if (!hitBoard[y][x]) {
+    return { x, y };
+  } else {
     // а если тут заканчиваются клетки?
     findCellToAttack(hitBoard);
-  } else {
-    console.log('found coords', x, y);
-    return { x, y };
   }
 };
