@@ -1,14 +1,15 @@
-import { WebSocket, WebSocketServer } from "ws";
+import { WebSocket, WebSocketServer } from 'ws';
 
-import { currentGames, rooms, users, winners } from "../storage";
-import { IActiveGame, IActiveGamePlayer, ISocketData } from "../types";
+import { currentGames, rooms, users, winners } from '../storage';
+import { IActiveGame, IActiveGamePlayer, ISocketData } from '../types';
 import {
   findUser,
   findRoom,
   getCurrentGameWebsockets,
   generatePlayerBoard,
   findEnemy,
-} from "../utils";
+  attackAllNearbyCells
+} from '../utils';
 import {
   attackFeedbackResponse,
   createGameResponse,
@@ -16,44 +17,44 @@ import {
   roomsUpdateResponse,
   startGameResponse,
   updateTurnResponse,
-  winnersResponse,
-} from "../websocket/requests";
+  winnersResponse
+} from '../websocket/requests';
 
 export const updateWinners = (wss: WebSocketServer) => {
-  console.log("update_winners");
+  console.log('update_winners');
   wss.clients.forEach((client) => {
     client.send(winnersResponse(winners));
   });
 };
 
 export const updateRooms = (wss: WebSocketServer) => {
-  console.log("update_rooms");
+  console.log('update_rooms');
   wss.clients.forEach((client) => {
     client.send(roomsUpdateResponse(rooms));
   });
 };
 
 export const createGame = (roomId: string) => {
-  console.log("create_game");
+  console.log('create_game');
   const currentRoom = findRoom(roomId);
   const currentRoomPlayers = currentRoom.roomUsers;
 
   const currentGame = {
     roomId,
-    players: [] as IActiveGamePlayer[],
+    players: [] as IActiveGamePlayer[]
   };
 
   currentGames.push(currentGame);
 
   currentRoomPlayers.forEach((player) => {
     const thisPlayersWebSocket = findUser(player.index).ws;
-    console.log(">>> USER ID ON CREATE", player.index);
+    console.log('>>> USER ID ON CREATE', player.index);
     thisPlayersWebSocket.send(createGameResponse(roomId, player));
   });
 };
 
 export const startGame = (currentGame: IActiveGame) => {
-  console.log("start_game");
+  console.log('start_game');
   let currentGamesWebsockets: WebSocket[] = [];
   currentGame.players.forEach((player) => {
     const { indexPlayer, ships } = player;
@@ -95,8 +96,8 @@ export const updateTurn = (
     const nextPlayer = findEnemy(currentGame, indexPlayer);
     ({ indexPlayer } = nextPlayer);
   }
-  console.log("turn");
-  console.log(">>> WHOSE TURN NOW?", indexPlayer);
+  console.log('turn');
+  console.log('>>> WHOSE TURN NOW?', indexPlayer);
   currentGame.idOfPlayersTurn = indexPlayer;
   ws.send(updateTurnResponse(indexPlayer));
 };
@@ -114,10 +115,10 @@ export const attackFeedback = (
   const enemyPlayer = findEnemy(currentGame, indexPlayer);
   const { ships } = enemyPlayer;
 
-  let status = "miss";
+  let status = 'miss';
   let isLanded = false;
   if (board[y][x]) {
-    status = "shot";
+    status = 'shot';
     isLanded = true;
 
     currentGameWebsockets.forEach((ws) => {
@@ -129,7 +130,7 @@ export const attackFeedback = (
       const {
         length,
         direction,
-        position: { x: x1, y: y1 },
+        position: { x: x1, y: y1 }
       } = ship;
       if (ship.isWrecked) return;
 
@@ -144,7 +145,7 @@ export const attackFeedback = (
         if (hitBoard[direction ? i : y1][direction ? x1 : i]) {
           thisShipTakenShots.push({
             x1: direction ? x1 : i,
-            y1: direction ? i : y1,
+            y1: direction ? i : y1
           });
         }
         i++;
@@ -161,7 +162,8 @@ export const attackFeedback = (
         currentGameWebsockets.forEach((ws) => {
           thisShipTakenShots.forEach((cell) => {
             const { x1, y1 } = cell;
-            ws.send(attackFeedbackResponse(x1, y1, indexPlayer, "killed"));
+            ws.send(attackFeedbackResponse(x1, y1, indexPlayer, 'killed'));
+            attackAllNearbyCells(x1, y1, ws, indexPlayer, board);
           });
           updateTurn(currentGame, indexPlayer, ws, isLanded);
         });
