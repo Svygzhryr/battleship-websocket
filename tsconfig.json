@@ -10,7 +10,7 @@
     "module": "NodeNext",
     "target": "ESNext",
     "moduleResolution": "Node16",
-    "outDir": "src"
+    "outDir": "dist"
   },
   "include": ["src-ts/**/*"]
 }
